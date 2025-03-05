@@ -19,10 +19,7 @@
       "defaultValue": "10.0.0.0/23"
     },
     "subnetConfigurations": {
-      "type": "array",
-      "metadata": {
-        "description": "Array of subnet objects with name, addressPrefix, and (optionally) NSG association."
-      }
+      "type": "array"
     }
   },
   "variables": {
@@ -45,21 +42,42 @@
       "properties": {
         "mode": "Incremental",
         "parameters": {
-          "vnetName": { "value": "[parameters('vnetName')]" },
-          "location": { "value": "[parameters('location')]" },
-          "vnetAddress": { "value": "[parameters('vnetAddress')]" },
-          "subnetConfigurations": { "value": "[parameters('subnetConfigurations')]" },
-          "tags": { "value": "[variables('tags')]" }
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vnetAddress": {
+            "value": "[parameters('vnetAddress')]"
+          },
+          "subnetConfigurations": {
+            "value": "[parameters('subnetConfigurations')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
           "contentVersion": "1.0.0.0",
           "parameters": {
-            "vnetName": { "type": "string" },
-            "location": { "type": "string" },
-            "vnetAddress": { "type": "string" },
-            "subnetConfigurations": { "type": "array" },
-            "tags": { "type": "object", "defaultValue": {} }
+            "vnetName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "vnetAddress": {
+              "type": "string"
+            },
+            "subnetConfigurations": {
+              "type": "array"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            }
           },
           "resources": [
             {
@@ -70,7 +88,9 @@
               "tags": "[parameters('tags')]",
               "properties": {
                 "addressSpace": {
-                  "addressPrefixes": [ "[parameters('vnetAddress')]" ]
+                  "addressPrefixes": [
+                    "[parameters('vnetAddress')]"
+                  ]
                 },
                 "subnets": "[parameters('subnetConfigurations')]"
               }
@@ -103,15 +123,24 @@
       "properties": {
         "mode": "Incremental",
         "parameters": {
-          "tags": { "value": "[variables('tags')]" },
-          "virtualNetworkName": { "value": "[parameters('vnetName')]" }
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "virtualNetworkName": {
+            "value": "[parameters('vnetName')]"
+          }
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
           "contentVersion": "1.0.0.0",
           "parameters": {
-            "tags": { "type": "object", "defaultValue": {} },
-            "virtualNetworkName": { "type": "string" }
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "virtualNetworkName": {
+              "type": "string"
+            }
           },
           "resources": [
             {
@@ -137,7 +166,6 @@
                 "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.blob.core.windows.net')]"
               ]
             }
-            // Add additional DNS zone deployments here for documents, vault, websites, search, openai, and aiservices following the same pattern.
           ],
           "outputs": {
             "dnsZoneId_blob": {
