@@ -1,0 +1,217 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "deploymentTags": {
+      "type": "object"
+    },
+    "storageAccountName": {
+      "type": "string"
+    },
+    "appServicePlanName": {
+      "type": "string"
+    },
+    "appInsightsName": {
+      "type": "string"
+    },
+    "openAiServiceName": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "resourceGroupName": "[format('rg-{0}', parameters('environmentName'))]",
+    "tags": "[parameters('deploymentTags')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storage-deployment",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2021-04-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "supportsHttpsTrafficOnly": true
+              }
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "appserviceplan-deployment",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('appServicePlanName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2021-02-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "Tier": "Standard",
+                "Name": "S1"
+              },
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "appServicePlanId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/serverfarms', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "openai-deployment",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('openAiServiceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2021-04-30",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "S0"
+              },
+              "kind": "OpenAI",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "openAiServiceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountId": {
+      "type": "string",
+      "value": "[reference('storage-deployment').outputs.storageAccountId.value]"
+    },
+    "appServicePlanId": {
+      "type": "string",
+      "value": "[reference('appserviceplan-deployment').outputs.appServicePlanId.value]"
+    },
+    "openAiServiceId": {
+      "type": "string",
+      "value": "[reference('openai-deployment').outputs.openAiServiceId.value]"
+    }
+  }
+}
