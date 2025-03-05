@@ -1,0 +1,271 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "deploymentTags": {
+      "type": "object"
+    },
+    "vmUserName": {
+      "type": "string"
+    },
+    "vmUserPassword": {
+      "type": "securestring"
+    },
+    "ztVmName": {
+      "type": "string"
+    },
+    "subnetId": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "resourceGroupName": "[format('rg-{0}', parameters('environmentName'))]",
+    "tags": "[parameters('deploymentTags')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vm-deployment",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "name": {
+            "value": "[parameters('ztVmName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "subnetId": {
+            "value": "[parameters('subnetId')]"
+          },
+          "vmUserName": {
+            "value": "[parameters('vmUserName')]"
+          },
+          "vmUserPassword": {
+            "value": "[parameters('vmUserPassword')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "subnetId": {
+              "type": "string"
+            },
+            "vmUserName": {
+              "type": "string"
+            },
+            "vmUserPassword": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2021-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_D2s_v3"
+                },
+                "osProfile": {
+                  "computerName": "[parameters('name')]",
+                  "adminUsername": "[parameters('vmUserName')]",
+                  "adminPassword": "[parameters('vmUserPassword')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "UbuntuServer",
+                    "sku": "18.04-LTS",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage"
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('name'), 'Nic'))]"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2020-06-01",
+              "name": "[concat(parameters('name'), 'Nic')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "private-endpoints-deployment",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "name": {
+            "value": "[concat(parameters('ztVmName'), '-pe')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "subnetId": {
+            "value": "[parameters('subnetId')]"
+          },
+          "serviceId": {
+            "value": "[reference('vm-deployment').outputs.vmId.value]"
+          },
+          "groupIds": {
+            "value": [
+              "compute"
+            ]
+          },
+          "dnsZoneName": {
+            "value": "privatelink.compute.azure.com"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "subnetId": {
+              "type": "string"
+            },
+            "serviceId": {
+              "type": "string"
+            },
+            "groupIds": {
+              "type": "array"
+            },
+            "dnsZoneName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2021-02-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "connection1",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('serviceId')]",
+                      "groupIds": "[parameters('groupIds')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2020-06-01",
+              "name": "[concat(parameters('name'), '-dnsgroup')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', parameters('dnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "privateEndpointId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/privateEndpoints', parameters('name'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'vm-deployment')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "vmId": {
+      "type": "string",
+      "value": "[reference('vm-deployment').outputs.vmId.value]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[reference('private-endpoints-deployment').outputs.privateEndpointId.value]"
+    }
+  }
+}
